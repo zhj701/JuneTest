@@ -7,7 +7,9 @@
 //
 
 #import "AppDelegate.h"
-
+#import "HomePageVC.h"
+#import <Fabric/Fabric.h>
+#import <Crashlytics/Crashlytics.h>
 @interface AppDelegate ()
 
 @end
@@ -16,8 +18,62 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    application.applicationIconBadgeNumber = 0;
+    
+    self.window = [[UIWindow alloc]initWithFrame:[UIScreen mainScreen].bounds];
+    NSDictionary *dic = [UserDefault getUserDefalut:@"userInfo"];
+    ViewController *vc;
+    if (dic.allKeys.count) {
+        vc = [HomePageVC new];
+    }
+    else{
+        vc = [ViewController new];
+    }
+
+    UINavigationController *nav = [[UINavigationController alloc]initWithRootViewController:vc];
+    self.window.rootViewController = nav;
+    [self.window makeKeyAndVisible];
+    
+    [self registerRemoveNoti:application];
+    [Fabric with:@[[Crashlytics class]]];
     return YES;
+}
+
+- (void)registerRemoveNoti:(UIApplication *)application{
+    UIUserNotificationType type = UIUserNotificationTypeBadge |
+                                    UIUserNotificationTypeAlert |
+                                    UIUserNotificationTypeSound;
+    
+    UIUserNotificationSettings *s =[UIUserNotificationSettings
+                                    settingsForTypes:type
+                                    categories:nil];
+    
+    [application registerUserNotificationSettings:s];
+    [application registerForRemoteNotifications];
+}
+
+#pragma mark - NotificationDelegate
+- (void)application:(UIApplication *)application didRegisterUserNotificationSettings:(UIUserNotificationSettings *)notificationSettings{
+    [application registerForRemoteNotifications];
+}
+
+- (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken{
+    NSString *decToken = [NSString stringWithFormat:@"%@", deviceToken];
+     //获取到之后要去掉尖括号和中间的空格
+    NSMutableString *st = [NSMutableString stringWithString:decToken];
+    [st deleteCharactersInRange:NSMakeRange(0, 1)];
+    [st deleteCharactersInRange:NSMakeRange(st.length-1, 1)];
+    NSString *string1 = [st stringByReplacingOccurrencesOfString:@" " withString:@""];
+    //保存到本地
+    [UserDefault saveUserDefault:@"deviceToken" andValue:string1];
+}
+
+- (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error{
+    NSLog(@"%@",[error localizedDescription]);
+}
+
+- (void)application:(UIApplication *)application didReceiveRemoteNotification:(NSDictionary *)userInfo{
+    NSLog(@"Receive remote notification : %@",userInfo);
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
